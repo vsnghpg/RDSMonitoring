@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: "CloudFormation Template to  "
+Description: "CloudFormation Template to configure, subscribe and monitor key and important metrices and events for RDS SQL Server"
 
 Parameters:
   EmailID:
