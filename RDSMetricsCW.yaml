@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation Template to  "
+
+Parameters:
+  EmailID:
+    Description: Enter Subscriber's Email-ID. This can be an individual Email-ID or a PDL
+    Type: String
+  RDSSQLServerInstanceName:
+    Description: Enter RDS SQL Server Instance Name for which you want to enable monitoring and alarms
+    Type: String
+
+Resources:
+  SNSTopicForRDSCloudWatchAlarm:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      Subscription:
+        - Endpoint: !Ref EmailID
+          Protocol: "email"
+      TopicName: "RDSCloudWatchMetricsAlarm"
+
+  CloudWatchAlarmForFreeableMemory:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Freeable-Memory"
+      AlarmDescription: "A CloudWatch Alarm that triggers when FreeableMemory drop to 10 MB"
+      MetricName: "FreeableMemory"
+      Namespace: "AWS/RDS"
+      Statistic: "Minimum"
+      Period: "300"
+      EvaluationPeriods: "5"
+      Threshold: 10
+      ComparisonOperator: "LessThanOrEqualToThreshold"
+      AlarmActions:
+        - Ref: "SNSTopicForRDSCloudWatchAlarm"
+      Dimensions:
+      - Name: DBInstanceIdentifier
+        Value: !Ref RDSSQLServerInstanceName
+      TreatMissingData: "breaching"
+
+  CloudWatchAlarmForCPUUtilization:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Maximum-CPU-Utilization"
+      AlarmDescription: "A CloudWatch Alarm that triggers when Maximum CPU Utilization Exceeds 80%"
+      MetricName: "CPUUtilization"
+      Namespace: "AWS/RDS"
+      Statistic: "Maximum"
+      Period: "300"
+      EvaluationPeriods: "5"
+      Threshold: 80
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - Ref: "SNSTopicForRDSCloudWatchAlarm"
+      Dimensions:
+      - Name: DBInstanceIdentifier
+        Value: !Ref RDSSQLServerInstanceName
+      TreatMissingData: "breaching"
+
+  CloudWatchAlarmFoReadLatency:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Read-Latency"
+      AlarmDescription: "A CloudWatch Alarm that triggers when Read Latency exceeds 20ms%"
+      MetricName: "ReadLatency"
+      Namespace: "AWS/RDS"
+      Statistic: "Maximum"
+      Period: "300"
+      EvaluationPeriods: "5"
+      Threshold: 0.02
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - Ref: "SNSTopicForRDSCloudWatchAlarm"
+      Dimensions:
+      - Name: DBInstanceIdentifier
+        Value: !Ref RDSSQLServerInstanceName
+      TreatMissingData: "breaching"
+
+  CloudWatchAlarmForWriteLatency:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+      AlarmName: "Write-Latency"
+      AlarmDescription: "A CloudWatch Alarm that triggers when Write Latency exceeds 20ms%"
+      MetricName: "WriteLatency"
+      Namespace: "AWS/RDS"
+      Statistic: "Maximum"
+      Period: "300"
+      EvaluationPeriods: "5"
+      Threshold: 0.02
+      ComparisonOperator: "GreaterThanThreshold"
+      AlarmActions:
+        - Ref: "SNSTopicForRDSCloudWatchAlarm"
+      Dimensions:
+      - Name: DBInstanceIdentifier
+        Value: !Ref RDSSQLServerInstanceName
+      TreatMissingData: "breaching"
+
+  RDSEventsSubscription:
+    Type: "AWS::RDS::EventSubscription"
+    Properties: 
+      Enabled: true
+      EventCategories: 
+        - "configuration change"
+        - availability
+        - failover
+        - deletion
+      SnsTopicArn: !Ref SNSTopicForRDSCloudWatchAlarm
+      SourceIds: 
+        - Ref: RDSSQLServerInstanceName
+      SourceType: db-instance
+
+Outputs:
+
+  SNSTopic:
+    Description: SNS Topic ARN
+    Value: !Ref SNSTopicForRDSCloudWatchAlarm
+
+  CloudWatchAlarmCPU:
+    Description: Cloudwatch Alarm For CPU Threshold Breach
+    Value: !Ref CloudWatchAlarmForCPUUtilization
+
+
+  CloudWatchAlarmMemory:
+    Description: Cloudwatch Alarm For Freeable Memory Breach
+    Value: !Ref CloudWatchAlarmForFreeableMemory
+
+  CloudWatchAlarmReadLatency:
+    Description: Cloudwatch Alarm For Read latency Breach
+    Value: !Ref CloudWatchAlarmFoReadLatency
+
+  CloudWatchAlarmWriteLatency:
+    Description: Cloudwatch Alarm For Write latency Breach
+    Value: !Ref CloudWatchAlarmForWriteLatency
